@@ -120,21 +120,41 @@ The free tier is enough for personal use.
 Plug the screen and keyboard into the Windows machine. Open **PowerShell as
 Administrator**.
 
-Replace `your-github-username` below with your own GitHub username, then
-copy and paste the whole block. The script will be downloaded to `%TEMP%`,
-opened in Notepad so you can read it first, and only run after you close
-Notepad.
+Edit the four values at the top of the block below, then copy and paste
+the whole block. The script will be downloaded to `%TEMP%`, opened in
+Notepad so you can read it first, and only run after you close Notepad.
 
 ```powershell
-$GitHubUser = "your-github-username"
+$GitHubUser  = "your-github-username"
+$MachineName = "petbox"
+$SshUser     = "devops"
+$ProjectRoot = "C:\sources\pet-project"
+
+$RepoOwner  = $GitHubUser   # change if you are running someone else's fork
 $RepoName   = "tailscale-bootstrap-windows"
-$ScriptUrl  = "https://raw.githubusercontent.com/$GitHubUser/$RepoName/main/bootstrap.ps1"
+$ScriptUrl  = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/main/bootstrap.ps1"
 $ScriptPath = "$env:TEMP\bootstrap.ps1"
 
 Invoke-WebRequest -Uri $ScriptUrl -OutFile $ScriptPath
 Start-Process -FilePath notepad.exe -ArgumentList $ScriptPath -Wait
-PowerShell.exe -ExecutionPolicy Bypass -File $ScriptPath -GitHubUser $GitHubUser
+PowerShell.exe -ExecutionPolicy Bypass -File $ScriptPath `
+    -GitHubUser  $GitHubUser `
+    -MachineName $MachineName `
+    -SshUser     $SshUser `
+    -ProjectRoot $ProjectRoot
 ```
+
+The four values at the top are the only ones you usually need to change:
+
+| Variable       | Example                  | What it is                                    |
+| -------------- | ------------------------ | --------------------------------------------- |
+| `$GitHubUser`  | `your-github-username`   | GitHub username whose public SSH keys to install. |
+| `$MachineName` | `petbox`                 | Tailscale hostname for this machine.              |
+| `$SshUser`     | `devops`                 | Local Windows username created for SSH.           |
+| `$ProjectRoot` | `C:\sources\pet-project` | Project root directory (with `cache/`, `data/`, `tmp/`). |
+
+All four are required. The script has no built-in defaults: if any is
+missing it prints a usage screen and exits without making changes.
 
 Notes:
 
@@ -151,37 +171,15 @@ your laptop and approve this machine. The script then continues.
 When the script finishes you will see a final block with your Tailscale IP
 and the two SSH commands you can use from your laptop.
 
-### Optional parameters
-
-The script accepts a few extra parameters with sensible defaults:
-
-| Parameter      | Default          | Meaning                                       |
-| -------------- | ---------------- | --------------------------------------------- |
-| `-GitHubUser`  | (required)       | GitHub username whose public keys to install. |
-| `-MachineName` | `petbox`         | Tailscale hostname for this machine.          |
-| `-SshUser`     | `devops`         | Local Windows username created for SSH.       |
-| `-ProjectRoot` | `C:\sources\pet-project` | Project root directory.               |
-
-Pass them on the same `PowerShell.exe -File ...` line, for example:
-
-```powershell
-PowerShell.exe -ExecutionPolicy Bypass -File $ScriptPath `
-    -GitHubUser  $GitHubUser `
-    -MachineName "petbox" `
-    -SshUser     "devops" `
-    -ProjectRoot "C:\sources\pet-project"
-```
-
 ## 5. Test SSH from your laptop
 
-From the laptop, both of these should work:
+From the laptop, both of these should work (substitute the `SshUser`,
+`MachineName`, and Tailscale IP you used / saw printed):
 
 ```powershell
 ssh devops@petbox
 ssh devops@100.x.y.z
 ```
-
-Replace `100.x.y.z` with the Tailscale IPv4 the script printed.
 
 `devops@petbox` works because Tailscale provides MagicDNS for tailnet
 hostnames.

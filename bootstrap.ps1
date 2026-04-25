@@ -16,22 +16,31 @@
     After this script finishes you can unplug the screen and keyboard and manage
     the machine from your laptop over SSH through Tailscale.
 
+    All four parameters are required. There are no built-in defaults so the
+    script never picks names or paths for you. If you run the script without
+    them you will see a usage screen with a copy-paste example.
+
 .PARAMETER GitHubUser
     GitHub username whose public SSH keys (https://github.com/<user>.keys) will
-    be allowed to log in over SSH. Required.
+    be allowed to log in over SSH.
 
 .PARAMETER MachineName
-    Tailscale hostname for this machine. Defaults to "petbox".
+    Tailscale hostname for this machine. Also used to reach it on your tailnet
+    via MagicDNS, e.g. `ssh <SshUser>@<MachineName>`.
 
 .PARAMETER SshUser
-    Local Windows username that will be created (if missing) and used for SSH
-    login. Defaults to "devops".
+    Local Windows username to create (if missing) and to use for SSH login.
 
 .PARAMETER ProjectRoot
-    Project root directory to create. Defaults to "C:\sources\pet-project".
+    Project root directory to create. Subfolders cache/, data/, tmp/ are
+    created underneath it.
 
 .EXAMPLE
-    PowerShell.exe -ExecutionPolicy Bypass -File .\bootstrap.ps1 -GitHubUser my-github-user
+    PowerShell.exe -ExecutionPolicy Bypass -File .\bootstrap.ps1 `
+        -GitHubUser  "your-github-username" `
+        -MachineName "petbox" `
+        -SshUser     "devops" `
+        -ProjectRoot "C:\sources\pet-project"
 
 .NOTES
     Requires Windows PowerShell 5.1+ and an Administrator session.
@@ -39,18 +48,10 @@
 
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)]
-    [ValidateNotNullOrEmpty()]
     [string]$GitHubUser,
-
-    [ValidateNotNullOrEmpty()]
-    [string]$MachineName = 'petbox',
-
-    [ValidateNotNullOrEmpty()]
-    [string]$SshUser = 'devops',
-
-    [ValidateNotNullOrEmpty()]
-    [string]$ProjectRoot = 'C:\sources\pet-project'
+    [string]$MachineName,
+    [string]$SshUser,
+    [string]$ProjectRoot
 )
 
 Set-StrictMode -Version Latest
@@ -115,6 +116,36 @@ function Write-ErrorMessage {
     if ($Suggestion) {
         Write-Host ('SUGGESTION: ' + $Suggestion) -ForegroundColor Yellow
     }
+    Write-Host ''
+}
+
+function Show-Usage {
+    # Friendly usage screen shown when a required parameter is missing. We
+    # implement this ourselves (rather than using [Parameter(Mandatory)]) so
+    # the script never blocks on a PowerShell prompt - the spec asks for no
+    # unnecessary interactivity.
+    $bar = ('=' * 60)
+    Write-Host ''
+    Write-Host $bar -ForegroundColor Cyan
+    Write-Host 'Windows Headless Bootstrap - usage' -ForegroundColor Cyan
+    Write-Host $bar -ForegroundColor Cyan
+    Write-Host ''
+    Write-Host 'All four parameters are required.'
+    Write-Host ''
+    Write-Host 'Parameters:' -ForegroundColor White
+    Write-Host '  -GitHubUser    GitHub username whose public SSH keys to install.'
+    Write-Host '  -MachineName   Tailscale hostname for this machine.'
+    Write-Host '  -SshUser       Local Windows username to create for SSH.'
+    Write-Host '  -ProjectRoot   Project root directory to create (with cache/, data/, tmp/).'
+    Write-Host ''
+    Write-Host 'Example (run from an Administrator PowerShell):' -ForegroundColor White
+    Write-Host '  PowerShell.exe -ExecutionPolicy Bypass -File .\bootstrap.ps1 `'
+    Write-Host '      -GitHubUser  "your-github-username" `'
+    Write-Host '      -MachineName "petbox" `'
+    Write-Host '      -SshUser     "devops" `'
+    Write-Host '      -ProjectRoot "C:\sources\pet-project"'
+    Write-Host ''
+    Write-Host 'See README.md for the full beginner walkthrough.' -ForegroundColor Gray
     Write-Host ''
 }
 
@@ -598,6 +629,22 @@ function New-ProjectDirectories {
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
+# Validate required parameters before doing anything else. We use a custom
+# usage screen instead of [Parameter(Mandatory)] / [ValidateNotNullOrEmpty()]
+# so beginners get a copy-paste example rather than a PowerShell prompt or a
+# raw binding error.
+$missing = @()
+if (-not $GitHubUser)  { $missing += '-GitHubUser' }
+if (-not $MachineName) { $missing += '-MachineName' }
+if (-not $SshUser)     { $missing += '-SshUser' }
+if (-not $ProjectRoot) { $missing += '-ProjectRoot' }
+if ($missing.Count -gt 0) {
+    Show-Usage
+    Write-Host ('Missing required parameter(s): ' + ($missing -join ', ')) -ForegroundColor Red
+    Write-Host ''
+    exit 2
+}
 
 try {
     Write-Title 'Windows Headless Bootstrap'
