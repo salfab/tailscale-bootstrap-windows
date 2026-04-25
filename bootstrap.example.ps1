@@ -20,7 +20,7 @@ $ErrorActionPreference = 'Stop'
 $GitHubUser  = 'your-github-username'
 $MachineName = 'petbox'
 $SshUser     = 'devops'
-$ProjectRoot = 'D:\pet-project'
+$ProjectRoot = 'C:\sources\pet-project'
 # --------------------------------------------------------------------------
 
 & "$PSScriptRoot\bootstrap.ps1" `

@@ -160,7 +160,7 @@ The script accepts a few extra parameters with sensible defaults:
 | `-GitHubUser`  | (required)       | GitHub username whose public keys to install. |
 | `-MachineName` | `petbox`         | Tailscale hostname for this machine.          |
 | `-SshUser`     | `devops`         | Local Windows username created for SSH.       |
-| `-ProjectRoot` | `D:\pet-project` | Project root directory.                       |
+| `-ProjectRoot` | `C:\sources\pet-project` | Project root directory.               |
 
 Pass them on the same `PowerShell.exe -File ...` line, for example:
 
@@ -169,7 +169,7 @@ PowerShell.exe -ExecutionPolicy Bypass -File $ScriptPath `
     -GitHubUser  $GitHubUser `
     -MachineName "petbox" `
     -SshUser     "devops" `
-    -ProjectRoot "D:\pet-project"
+    -ProjectRoot "C:\sources\pet-project"
 ```
 
 ## 5. Test SSH from your laptop

@@ -28,7 +28,7 @@
     login. Defaults to "devops".
 
 .PARAMETER ProjectRoot
-    Project root directory to create on the data drive. Defaults to "D:\pet-project".
+    Project root directory to create. Defaults to "C:\sources\pet-project".
 
 .EXAMPLE
     PowerShell.exe -ExecutionPolicy Bypass -File .\bootstrap.ps1 -GitHubUser my-github-user
@@ -50,7 +50,7 @@ param(
     [string]$SshUser = 'devops',
 
     [ValidateNotNullOrEmpty()]
-    [string]$ProjectRoot = 'D:\pet-project'
+    [string]$ProjectRoot = 'C:\sources\pet-project'
 )
 
 Set-StrictMode -Version Latest
