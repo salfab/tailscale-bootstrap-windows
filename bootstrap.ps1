@@ -220,25 +220,50 @@ function Wait-ForTailscaleIp {
     throw "Timed out waiting for a Tailscale IPv4 address. Make sure the Tailscale login was completed and the machine is connected to the tailnet."
 }
 
+function Disable-DefaultOpenSshFirewallRule {
+    # SECURITY (fail-closed): the OpenSSH.Server capability creates a built-in
+    # firewall rule named 'OpenSSH-Server-In-TCP' that is enabled by default
+    # and allows port 22 from every profile. We must keep it disabled at all
+    # times. Step 8 of the bootstrap creates a Tailscale-restricted rule;
+    # until then (and on every rerun) the only allow-rule is ours.
+    $rule = Get-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -ErrorAction SilentlyContinue
+    if ($rule -and $rule.Enabled -ne 'False') {
+        Disable-NetFirewallRule -Name 'OpenSSH-Server-In-TCP'
+        Write-Info "Disabled default firewall rule 'OpenSSH-Server-In-TCP'."
+    }
+}
+
 function Install-OpenSshServer {
+    # SECURITY: disable the built-in OpenSSH firewall rule BEFORE the capability
+    # install (in case it already exists from a prior install) and AGAIN after,
+    # because Add-WindowsCapability recreates and enables the rule. We must do
+    # this BEFORE starting sshd so the service never has an unrestricted
+    # listener accessible on the LAN, even briefly.
+    Disable-DefaultOpenSshFirewallRule
+
     $cap = Get-WindowsCapability -Online -ErrorAction Stop |
         Where-Object { $_.Name -like 'OpenSSH.Server*' } |
         Select-Object -First 1
     if (-not $cap) {
-        throw "OpenSSH.Server capability not found on this Windows edition."
+        throw "OpenSSH.Server capability not found on this Windows edition. Install the latest Windows updates and rerun this script."
     }
 
     if ($cap.State -ne 'Installed') {
         Write-Info "Installing capability: $($cap.Name)"
         Add-WindowsCapability -Online -Name $cap.Name | Out-Null
+        # The capability install just recreated the default rule; disable it again.
+        Disable-DefaultOpenSshFirewallRule
     } else {
         Write-Info "OpenSSH Server already installed."
     }
 
+    if (-not (Get-Service -Name 'sshd' -ErrorAction SilentlyContinue)) {
+        throw "OpenSSH Server is installed but the 'sshd' service is not registered yet. A reboot may be required; reboot and rerun this script."
+    }
+
     Write-Info 'Configuring sshd service (Automatic, started)...'
     Set-Service -Name 'sshd' -StartupType Automatic
-    $svc = Get-Service -Name 'sshd'
-    if ($svc.Status -ne 'Running') {
+    if ((Get-Service -Name 'sshd').Status -ne 'Running') {
         Start-Service -Name 'sshd'
     }
 }
@@ -352,6 +377,14 @@ function Get-GitHubPublicKeys {
 
 function Set-AdministratorsAuthorizedKeys {
     param([Parameter(Mandatory)][string[]]$Keys)
+
+    # Defensive: refuse to write an empty authorized_keys file. An empty file
+    # would lock everyone out of SSH on the next sshd restart. The caller
+    # already validates that GitHub returned at least one key, but we re-check
+    # here to keep this function safe to call directly.
+    if (-not $Keys -or $Keys.Count -eq 0) {
+        throw "Refusing to write an empty administrators_authorized_keys file."
+    }
 
     $sshDir  = 'C:\ProgramData\ssh'
     $keyFile = Join-Path $sshDir 'administrators_authorized_keys'
@@ -497,15 +530,12 @@ function Set-DefaultSshShellToPowerShell {
 function Set-SshFirewallTailscaleOnly {
     param([Parameter(Mandatory)][string]$TailscaleIPv4)
 
-    $oldRule = 'OpenSSH-Server-In-TCP'
     $newRule = 'OpenSSH-Server-In-TCP-TailscaleOnly'
 
-    # Disable the default open-to-everywhere rule if present.
-    $existingDefault = Get-NetFirewallRule -Name $oldRule -ErrorAction SilentlyContinue
-    if ($existingDefault) {
-        Disable-NetFirewallRule -Name $oldRule
-        Write-Info "Disabled default firewall rule '$oldRule'."
-    }
+    # Belt-and-braces: the default rule was already disabled by
+    # Install-OpenSshServer, but make sure it's still disabled here so reruns
+    # cannot leave it enabled.
+    Disable-DefaultOpenSshFirewallRule
 
     # Remove our previous rule so we can recreate it cleanly (idempotent).
     $existingNew = Get-NetFirewallRule -Name $newRule -ErrorAction SilentlyContinue

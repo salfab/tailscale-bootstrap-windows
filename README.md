@@ -101,8 +101,8 @@ Administrator** and run the following. Replace `your-github-username` with
 your own GitHub username.
 
 > The command downloads the script to `%TEMP%`, opens it in Notepad so you
-> can read it before running, and then executes it. **Do not** pipe remote
-> scripts straight into `iex`.
+> can read it before running, and then executes it once you close Notepad.
+> **Do not** pipe remote scripts straight into `iex`.
 
 ```powershell
 $GitHubUser = "your-github-username"
@@ -112,8 +112,9 @@ $ScriptPath = "$env:TEMP\bootstrap.ps1"
 
 Invoke-WebRequest -Uri $ScriptUrl -OutFile $ScriptPath
 
-# Read the script before running it. Close Notepad to continue.
-notepad $ScriptPath
+# Open the script in Notepad and WAIT until you close Notepad before running it.
+# (Plain `notepad $ScriptPath` does not block, so we use Start-Process -Wait.)
+Start-Process -FilePath notepad.exe -ArgumentList $ScriptPath -Wait
 
 PowerShell.exe -ExecutionPolicy Bypass -File $ScriptPath -GitHubUser $GitHubUser
 ```
