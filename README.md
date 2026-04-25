@@ -135,34 +135,6 @@ save.
 
 The free tier is enough for personal use.
 
-## (Optional) Fork this repository
-
-You can run the script straight from the upstream repo by leaving
-`$RepoOwner` set to the upstream GitHub user. But for long-term use it is
-safer to fork: you then own the exact code that runs as Administrator on
-your machine and nothing changes upstream without you noticing.
-
-On GitHub, click **Fork** at the top right of the repo page (or use
-[`gh repo fork`](https://cli.github.com/manual/gh_repo_fork) if you have
-the GitHub CLI). Then on your laptop:
-
-```powershell
-git clone https://github.com/<your-github-username>/tailscale-bootstrap-windows.git
-cd tailscale-bootstrap-windows
-```
-
-If you want to customise anything (defaults, comments, extra steps), edit
-the files locally and push:
-
-```powershell
-git add .
-git commit -m "my customisations"
-git push origin main
-```
-
-In step 4 below, set `$RepoOwner` to your own GitHub username so the
-bootstrap downloads your fork instead of the upstream.
-
 ## 4. Run the one-time bootstrap on the headless Windows machine
 
 Plug the screen and keyboard into the Windows machine. Open **PowerShell as
@@ -178,9 +150,8 @@ $MachineName = "petbox"
 $SshUser     = "devops"
 $ProjectRoot = "C:\sources\pet-project"
 
-$RepoOwner  = $GitHubUser   # change if you are running someone else's fork
 $RepoName   = "tailscale-bootstrap-windows"
-$ScriptUrl  = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/main/bootstrap.ps1"
+$ScriptUrl  = "https://raw.githubusercontent.com/salfab/$RepoName/main/bootstrap.ps1"
 $ScriptPath = "$env:TEMP\bootstrap.ps1"
 
 Invoke-WebRequest -Uri $ScriptUrl -OutFile $ScriptPath
