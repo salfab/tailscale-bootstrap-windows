@@ -1,0 +1,35 @@
+# Local-only PowerShell wrappers (e.g. bootstrap.local.ps1).
+# Useful so contributors can keep a local invocation file out of git.
+*.local.ps1
+
+# Environment files that may contain secrets.
+.env
+.env.*
+
+# Logs and temporary files.
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+~$*
+
+# PowerShell transcript files.
+PowerShell_transcript.*.txt
+
+# Private SSH keys. Never commit these.
+# Note: public keys (e.g. id_ed25519.pub) are safe to share, but the matching
+# private keys (id_ed25519, id_rsa, etc.) must remain secret. We deliberately
+# do NOT ignore *.pub here.
+id_ed25519
+id_ecdsa
+id_rsa
+id_dsa
+*.pem
+*.key
+
+# OS / editor noise.
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
