@@ -75,6 +75,26 @@ This script will fetch your **public** key from your GitHub profile and
 install it on the Windows machine. SSH then lets you log in by proving you
 hold the matching private key. There is no password to type or to leak.
 
+### Where each layer lives
+
+These three pieces are independent and do different jobs:
+
+| Layer    | Role                                                          | Touches your SSH key? |
+| -------- | ------------------------------------------------------------- | --------------------- |
+| `ssh-keygen` on your laptop | Generates the key pair locally.                | Yes — creates it.     |
+| GitHub   | Public-key distribution (`https://<user>.keys`).              | Public key only.      |
+| Tailscale | Encrypted network tunnel between laptop and headless machine. | **No.** It never sees or stores SSH keys. |
+| OpenSSH  | Authenticates SSH logins using the public/private key pair.   | Yes — the standard way. |
+
+In other words, **the key pair is generated on your laptop with
+`ssh-keygen` and never leaves it**. GitHub stores only the public half so
+this script can download it. Tailscale is just the network — it does not
+generate, store, or look at SSH keys.
+
+(Tailscale does have a separate feature called "Tailscale SSH" that
+replaces OpenSSH key auth with Tailscale identity. We deliberately do
+**not** use it here — this repo sticks to standard OpenSSH + key auth.)
+
 ## 1. Generate an SSH key on your laptop
 
 Skip this step if you already have a key you want to use.
@@ -114,6 +134,34 @@ save.
 - Verify your laptop appears in <https://login.tailscale.com/admin/machines>.
 
 The free tier is enough for personal use.
+
+## (Optional) Fork this repository
+
+You can run the script straight from the upstream repo by leaving
+`$RepoOwner` set to the upstream GitHub user. But for long-term use it is
+safer to fork: you then own the exact code that runs as Administrator on
+your machine and nothing changes upstream without you noticing.
+
+On GitHub, click **Fork** at the top right of the repo page (or use
+[`gh repo fork`](https://cli.github.com/manual/gh_repo_fork) if you have
+the GitHub CLI). Then on your laptop:
+
+```powershell
+git clone https://github.com/<your-github-username>/tailscale-bootstrap-windows.git
+cd tailscale-bootstrap-windows
+```
+
+If you want to customise anything (defaults, comments, extra steps), edit
+the files locally and push:
+
+```powershell
+git add .
+git commit -m "my customisations"
+git push origin main
+```
+
+In step 4 below, set `$RepoOwner` to your own GitHub username so the
+bootstrap downloads your fork instead of the upstream.
 
 ## 4. Run the one-time bootstrap on the headless Windows machine
 
