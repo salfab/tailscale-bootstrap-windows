@@ -3,7 +3,7 @@
 A safe, minimal, one-time bootstrap for a Windows headless machine. Plug in a
 screen and keyboard once, run a single command from an Administrator
 PowerShell, finish the Tailscale browser login, and from then on you can
-manage the machine remotely from your laptop over SSH through Tailscale.
+manage the machine remotely from your dev machine over SSH through Tailscale.
 
 ## What this repo does
 
@@ -36,7 +36,7 @@ is meant to be done **after** bootstrap, remotely, over SSH.
 ## Architecture
 
 ```
-Laptop
+Dev machine
   |
   | SSH
   |
@@ -54,21 +54,21 @@ PowerShell remote administration
 
 - A Windows machine to bootstrap (the "headless server").
 - A temporary screen and keyboard for the first run.
-- A laptop you will use to SSH into the machine.
+- A dev machine you will use to SSH into the machine.
 - A free [Tailscale](https://tailscale.com/) account.
 - A [GitHub](https://github.com/) account.
 - Administrator rights on the Windows machine.
 
-If you do not yet have an SSH key on your laptop, step 1 below shows how to
+If you do not yet have an SSH key on your dev machine, step 1 below shows how to
 make one.
 
 ## What is an SSH key?
 
-An SSH key is a pair of files: a **private key** that stays on your laptop
+An SSH key is a pair of files: a **private key** that stays on your dev machine
 and a **public key** that you give to servers you want to log in to.
 
 - The **public key** is safe to share. You will upload it to GitHub.
-- The **private key** must stay on your laptop and never be shared, emailed,
+- The **private key** must stay on your dev machine and never be shared, emailed,
   uploaded, or committed.
 
 This script will fetch your **public** key from your GitHub profile and
@@ -81,12 +81,12 @@ These three pieces are independent and do different jobs:
 
 | Layer    | Role                                                          | Touches your SSH key? |
 | -------- | ------------------------------------------------------------- | --------------------- |
-| `ssh-keygen` on your laptop | Generates the key pair locally.                | Yes — creates it.     |
+| `ssh-keygen` on your dev machine | Generates the key pair locally.                | Yes — creates it.     |
 | GitHub   | Public-key distribution (`https://<user>.keys`).              | Public key only.      |
-| Tailscale | Encrypted network tunnel between laptop and headless machine. | **No.** It never sees or stores SSH keys. |
+| Tailscale | Encrypted network tunnel between dev machine and headless machine. | **No.** It never sees or stores SSH keys. |
 | OpenSSH  | Authenticates SSH logins using the public/private key pair.   | Yes — the standard way. |
 
-In other words, **the key pair is generated on your laptop with
+In other words, **the key pair is generated on your dev machine with
 `ssh-keygen` and never leaves it**. GitHub stores only the public half so
 this script can download it. Tailscale is just the network — it does not
 generate, store, or look at SSH keys.
@@ -95,11 +95,11 @@ generate, store, or look at SSH keys.
 replaces OpenSSH key auth with Tailscale identity. We deliberately do
 **not** use it here — this repo sticks to standard OpenSSH + key auth.)
 
-## 1. Generate an SSH key on your laptop
+## 1. Generate an SSH key on your dev machine
 
 Skip this step if you already have a key you want to use.
 
-In Windows PowerShell on your **laptop** (not the headless machine):
+In Windows PowerShell on your **dev machine** (not the headless machine):
 
 ```powershell
 ssh-keygen -t ed25519 -C "petbox"
@@ -127,11 +127,11 @@ Copy the entire line that PowerShell prints, then go to
 <https://github.com/settings/keys>, click **New SSH key**, paste it, and
 save.
 
-## 3. Install and log into Tailscale on your laptop
+## 3. Install and log into Tailscale on your dev machine
 
 - Download from <https://tailscale.com/download> and install.
 - Sign in with the account you will also use on the headless machine.
-- Verify your laptop appears in <https://login.tailscale.com/admin/machines>.
+- Verify your dev machine appears in <https://login.tailscale.com/admin/machines>.
 
 The free tier is enough for personal use.
 
@@ -190,14 +190,14 @@ Notes:
 
 When the script reaches the Tailscale step, a browser window will open (or
 a login URL will be printed). Sign in with the same Tailscale account as
-your laptop and approve this machine. The script then continues.
+your dev machine and approve this machine. The script then continues.
 
 When the script finishes you will see a final block with your Tailscale IP
-and the two SSH commands you can use from your laptop.
+and the two SSH commands you can use from your dev machine.
 
-## 5. Test SSH from your laptop
+## 5. Test SSH from your dev machine
 
-From the laptop, both of these should work (substitute the `SshUser`,
+From the dev machine, both of these should work (substitute the `SshUser`,
 `MachineName`, and Tailscale IP you used / saw printed):
 
 ```powershell
@@ -208,14 +208,14 @@ ssh devops@100.x.y.z
 `devops@petbox` works because Tailscale provides MagicDNS for tailnet
 hostnames.
 
-Once SSH works from the laptop, you can unplug the screen and keyboard
+Once SSH works from the dev machine, you can unplug the screen and keyboard
 from the Windows machine.
 
 ## Troubleshooting
 
 **`ssh: Could not resolve hostname petbox`**
-Your laptop is not reaching MagicDNS. Make sure the Tailscale client is
-running on your laptop and MagicDNS is enabled at
+Your dev machine is not reaching MagicDNS. Make sure the Tailscale client is
+running on your dev machine and MagicDNS is enabled at
 <https://login.tailscale.com/admin/dns>. As a fallback, use the Tailscale
 IPv4 directly.
 
@@ -235,7 +235,7 @@ On some Windows editions you may need to install Windows updates first,
 then reboot and rerun.
 
 **`Permission denied (publickey)` when trying to SSH.**
-Make sure the laptop's public key is in your GitHub account and that you
+Make sure the dev machine's public key is in your GitHub account and that you
 are connecting as the SSH user the script created (default `devops`).
 
 **Firewall rule looks wrong.**
@@ -281,7 +281,7 @@ steps, and how to revoke access.
 
 ## After bootstrap
 
-Once SSH works from the laptop, this repository is done. Anything else
+Once SSH works from the dev machine, this repository is done. Anything else
 (Docker, app deployments, GHCR pulls, GitHub Actions runners, reverse
 proxies, CI/CD) belongs **later, remotely, over SSH** and is out of scope
 here.

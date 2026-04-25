@@ -10,7 +10,7 @@ The bootstrap is intended for a single-operator "pet" Windows machine on a
 home or small-office network. The operator wants to:
 
 - run a Windows server without keeping a screen and keyboard attached;
-- reach it from their laptop, anywhere, without exposing anything to the
+- reach it from their dev machine, anywhere, without exposing anything to the
   public Internet;
 - use only credentials they already trust (their existing GitHub SSH keys);
 - limit the damage if any single component is compromised.
@@ -21,7 +21,7 @@ The script trusts:
   Administrator).
 - **GitHub** for the operator's listed SSH public keys
   (`https://api.github.com/users/<user>/keys`).
-- **Tailscale** for the private overlay network and identity of the laptop.
+- **Tailscale** for the private overlay network and identity of the dev machine.
 - **The TLS PKI** for the HTTPS connection to GitHub when fetching keys and
   for the Tailscale control plane.
 
@@ -58,7 +58,7 @@ The script trusts:
   is in the same tailnet can reach SSH on port 22 (subject to Tailscale ACLs).
   Configure Tailscale ACLs to limit which devices can reach the headless
   machine on TCP 22.
-- A **compromised laptop**. If your laptop is taken over, the attacker has
+- A **compromised dev machine**. If your dev machine is taken over, the attacker has
   your SSH private key and your Tailscale device. SSH key passphrases and
   full-disk encryption help here.
 - A **compromised Windows machine**. Local malware running as Administrator
@@ -96,7 +96,7 @@ password-based code paths in `sshd` entirely.
 - No port forwarding on the home router, so no Internet-facing attack
   surface for SSH at all.
 - Tailscale provides identity, MagicDNS, and ACLs.
-- The headless machine is reachable from anywhere the operator's laptop is,
+- The headless machine is reachable from anywhere the operator's dev machine is,
   without dynamic DNS or VPN appliances.
 
 ## Why remote scripts must be reviewed before execution
@@ -116,7 +116,7 @@ compromised, future runs would execute different code. Therefore:
 
 ## How to rotate SSH keys
 
-1. On the laptop, generate a new key:
+1. On the dev machine, generate a new key:
 
    ```powershell
    ssh-keygen -t ed25519 -C "petbox-rotated"
@@ -131,13 +131,13 @@ compromised, future runs would execute different code. Therefore:
    `C:\ProgramData\ssh\administrators_authorized_keys` directly to remove
    the old key.
 5. Verify SSH still works with the new key, then delete the old private key
-   file on the laptop.
+   file on the dev machine.
 
 ## How to remove access entirely
 
 Do **all** of these to fully revoke access:
 
-1. **Tailscale**: remove the laptop and the headless machine from your
+1. **Tailscale**: remove the dev machine and the headless machine from your
    tailnet at <https://login.tailscale.com/admin/machines>.
 2. **GitHub**: remove SSH keys you no longer trust at
    <https://github.com/settings/keys>.

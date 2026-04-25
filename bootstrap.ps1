@@ -14,7 +14,7 @@
       - creates the project root directories.
 
     After this script finishes you can unplug the screen and keyboard and manage
-    the machine from your laptop over SSH through Tailscale.
+    the machine from your dev machine over SSH through Tailscale.
 
     All four parameters are required. There are no built-in defaults so the
     script never picks names or paths for you. If you run the script without
@@ -717,7 +717,7 @@ try {
     New-ProjectDirectories -Root $ProjectRoot
     Write-Success
 
-    Write-Title 'Bootstrap complete - SSH from your laptop'
+    Write-Title 'Bootstrap complete - SSH from your dev machine'
 
     Write-Host 'This Windows machine is now reachable over SSH through your tailnet.' -ForegroundColor White
     Write-Host ''
@@ -728,16 +728,16 @@ try {
     Write-Host  '  Authentication     : public key only (no password)'
     Write-Host ''
 
-    Write-Host 'Next steps - run these on your LAPTOP, not on this machine:' -ForegroundColor White
+    Write-Host 'Next steps - run these on your DEV MACHINE, not on this machine:' -ForegroundColor White
     Write-Host ''
 
-    Write-Host '  1. Confirm Tailscale is running on your laptop and that' -ForegroundColor White
+    Write-Host '  1. Confirm Tailscale is running on your dev machine and that' -ForegroundColor White
     Write-Host '     this machine appears in its tailnet:'
     Write-Host ''
     Write-Host '         tailscale status' -ForegroundColor Green
     Write-Host ''
 
-    Write-Host '  2. Open a terminal on your laptop (PowerShell, Terminal,' -ForegroundColor White
+    Write-Host '  2. Open a terminal on your dev machine (PowerShell, Terminal,' -ForegroundColor White
     Write-Host '     or any shell with the ssh command) and run:'
     Write-Host ''
     Write-Host ("         ssh {0}@{1}" -f $SshUser, $MachineName) -ForegroundColor Green
@@ -763,7 +763,7 @@ try {
     Write-Host '  - SSH password login is disabled (public-key authentication only).'
     Write-Host '  - SSH is restricted to the Tailscale interface; nothing on the'
     Write-Host '    public Internet can reach port 22 on this machine.'
-    Write-Host '  - Once SSH works from your laptop, you can unplug the screen'
+    Write-Host '  - Once SSH works from your dev machine, you can unplug the screen'
     Write-Host '    and keyboard from this machine.'
     Write-Host ''
     Write-Host 'If SSH does not work, see the Troubleshooting section of README.md.' -ForegroundColor Gray
