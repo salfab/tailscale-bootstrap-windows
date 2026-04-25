@@ -2,20 +2,20 @@
 
 A safe, minimal, one-time bootstrap for a Windows headless machine. Plug in a
 screen and keyboard once, run a single command from an Administrator
-PowerShell, finish the Tailscale browser login, and you can manage the machine
-remotely from your laptop over SSH through Tailscale forever after.
+PowerShell, finish the Tailscale browser login, and from then on you can
+manage the machine remotely from your laptop over SSH through Tailscale.
 
 ## What this repo does
 
 - Installs Tailscale (via `winget`) and joins this machine to your tailnet.
 - Installs the Windows OpenSSH Server.
-- Creates a local administrator user dedicated to SSH.
+- Creates a local administrator user dedicated to SSH (default name: `devops`).
 - Imports your public SSH keys from your GitHub account.
 - Configures `sshd` for **public-key authentication only** (no passwords).
 - Restricts inbound SSH to the Tailscale network interface.
 - Creates a project root folder with `cache/`, `data/`, `tmp/` subfolders.
 
-That's it. The goal is remote access, nothing more.
+That is the whole scope. The goal is remote access, nothing more.
 
 ## What this repo does NOT do
 
@@ -30,8 +30,8 @@ This repo is intentionally narrow. It does **not** install or configure:
 - Portainer
 - Any application stack
 
-Everything else (Docker, app deployments, GHCR pulls, CI/CD, reverse proxies,
-etc.) is meant to be done **after** bootstrap, remotely, over SSH.
+Everything else (Docker, app deployments, GHCR pulls, CI/CD, reverse proxies)
+is meant to be done **after** bootstrap, remotely, over SSH.
 
 ## Architecture
 
@@ -56,9 +56,24 @@ PowerShell remote administration
 - A temporary screen and keyboard for the first run.
 - A laptop you will use to SSH into the machine.
 - A free [Tailscale](https://tailscale.com/) account.
-- A [GitHub](https://github.com/) account with at least one SSH public key
-  already uploaded to your account.
+- A [GitHub](https://github.com/) account.
 - Administrator rights on the Windows machine.
+
+If you do not yet have an SSH key on your laptop, step 1 below shows how to
+make one.
+
+## What is an SSH key?
+
+An SSH key is a pair of files: a **private key** that stays on your laptop
+and a **public key** that you give to servers you want to log in to.
+
+- The **public key** is safe to share. You will upload it to GitHub.
+- The **private key** must stay on your laptop and never be shared, emailed,
+  uploaded, or committed.
+
+This script will fetch your **public** key from your GitHub profile and
+install it on the Windows machine. SSH then lets you log in by proving you
+hold the matching private key. There is no password to type or to leak.
 
 ## 1. Generate an SSH key on your laptop
 
@@ -70,8 +85,15 @@ In Windows PowerShell on your **laptop** (not the headless machine):
 ssh-keygen -t ed25519 -C "petbox"
 ```
 
-Accept the default location (`%USERPROFILE%\.ssh\id_ed25519`) and choose a
-passphrase if you want one.
+Press Enter to accept the default location
+(`%USERPROFILE%\.ssh\id_ed25519`). You can set a passphrase or leave it
+empty.
+
+This creates two files:
+
+- `id_ed25519`     — your **private** key. Never share this.
+- `id_ed25519.pub` — your **public** key. You will upload this to GitHub
+  in the next step.
 
 ## 2. Add the public key to GitHub
 
@@ -81,28 +103,27 @@ Print your public key:
 Get-Content "$env:USERPROFILE\.ssh\id_ed25519.pub"
 ```
 
-Copy the output, then add it at <https://github.com/settings/keys> as a new
-SSH key.
-
-The `.pub` file is **safe** to share. The other file (`id_ed25519`, no
-extension) is your **private key** and must never be shared, committed, or
-uploaded anywhere.
+Copy the entire line that PowerShell prints, then go to
+<https://github.com/settings/keys>, click **New SSH key**, paste it, and
+save.
 
 ## 3. Install and log into Tailscale on your laptop
 
 - Download from <https://tailscale.com/download> and install.
-- Sign in with the same account you will use on the headless machine.
+- Sign in with the account you will also use on the headless machine.
 - Verify your laptop appears in <https://login.tailscale.com/admin/machines>.
+
+The free tier is enough for personal use.
 
 ## 4. Run the one-time bootstrap on the headless Windows machine
 
 Plug the screen and keyboard into the Windows machine. Open **PowerShell as
-Administrator** and run the following. Replace `your-github-username` with
-your own GitHub username.
+Administrator**.
 
-> The command downloads the script to `%TEMP%`, opens it in Notepad so you
-> can read it before running, and then executes it once you close Notepad.
-> **Do not** pipe remote scripts straight into `iex`.
+Replace `your-github-username` below with your own GitHub username, then
+copy and paste the whole block. The script will be downloaded to `%TEMP%`,
+opened in Notepad so you can read it first, and only run after you close
+Notepad.
 
 ```powershell
 $GitHubUser = "your-github-username"
@@ -111,15 +132,37 @@ $ScriptUrl  = "https://raw.githubusercontent.com/$GitHubUser/$RepoName/main/boot
 $ScriptPath = "$env:TEMP\bootstrap.ps1"
 
 Invoke-WebRequest -Uri $ScriptUrl -OutFile $ScriptPath
-
-# Open the script in Notepad and WAIT until you close Notepad before running it.
-# (Plain `notepad $ScriptPath` does not block, so we use Start-Process -Wait.)
 Start-Process -FilePath notepad.exe -ArgumentList $ScriptPath -Wait
-
 PowerShell.exe -ExecutionPolicy Bypass -File $ScriptPath -GitHubUser $GitHubUser
 ```
 
-You can also pass the optional parameters:
+Notes:
+
+- **Do not** pipe remote scripts straight into `iex`. Always download and
+  inspect first.
+- For long-term reuse, change `main` in `$ScriptUrl` to a specific commit
+  SHA so a future change to the branch cannot silently change what you
+  run as Administrator.
+
+When the script reaches the Tailscale step, a browser window will open (or
+a login URL will be printed). Sign in with the same Tailscale account as
+your laptop and approve this machine. The script then continues.
+
+When the script finishes you will see a final block with your Tailscale IP
+and the two SSH commands you can use from your laptop.
+
+### Optional parameters
+
+The script accepts a few extra parameters with sensible defaults:
+
+| Parameter      | Default          | Meaning                                       |
+| -------------- | ---------------- | --------------------------------------------- |
+| `-GitHubUser`  | (required)       | GitHub username whose public keys to install. |
+| `-MachineName` | `petbox`         | Tailscale hostname for this machine.          |
+| `-SshUser`     | `devops`         | Local Windows username created for SSH.       |
+| `-ProjectRoot` | `D:\pet-project` | Project root directory.                       |
+
+Pass them on the same `PowerShell.exe -File ...` line, for example:
 
 ```powershell
 PowerShell.exe -ExecutionPolicy Bypass -File $ScriptPath `
@@ -128,12 +171,6 @@ PowerShell.exe -ExecutionPolicy Bypass -File $ScriptPath `
     -SshUser     "devops" `
     -ProjectRoot "D:\pet-project"
 ```
-
-When the script runs `tailscale up`, a browser window will open. Sign in with
-the same Tailscale account as your laptop and approve this machine.
-
-When the script finishes you will see a final result block with your
-Tailscale IPv4 address and the two SSH commands to use.
 
 ## 5. Test SSH from your laptop
 
@@ -144,20 +181,20 @@ ssh devops@petbox
 ssh devops@100.x.y.z
 ```
 
-(`100.x.y.z` is the Tailscale IPv4 the script printed.)
+Replace `100.x.y.z` with the Tailscale IPv4 the script printed.
 
 `devops@petbox` works because Tailscale provides MagicDNS for tailnet
 hostnames.
 
-Once SSH works from the laptop, you can unplug the screen and keyboard from
-the Windows machine.
+Once SSH works from the laptop, you can unplug the screen and keyboard
+from the Windows machine.
 
 ## Troubleshooting
 
 **`ssh: Could not resolve hostname petbox`**
-MagicDNS is not enabled or your laptop is not connected to Tailscale. Enable
-MagicDNS at <https://login.tailscale.com/admin/dns> and make sure the
-Tailscale client is running on your laptop. As a fallback use the Tailscale
+Your laptop is not reaching MagicDNS. Make sure the Tailscale client is
+running on your laptop and MagicDNS is enabled at
+<https://login.tailscale.com/admin/dns>. As a fallback, use the Tailscale
 IPv4 directly.
 
 **Tailscale login was not completed.**
@@ -167,68 +204,65 @@ browser login.
 
 **No GitHub SSH keys found.**
 Add at least one SSH public key at <https://github.com/settings/keys> and
-rerun the script. Verify your keys are visible at
+rerun the script. You can verify your keys are visible at
 `https://github.com/<your-username>.keys` (a public endpoint).
 
 **OpenSSH Server install fails.**
-Run `Get-WindowsCapability -Online | ? Name -like 'OpenSSH.Server*'` to see
-the available capability. On some Windows editions you may need to install
-Windows updates first. Try again after rebooting.
+Run `Get-WindowsCapability -Online | Where-Object Name -like 'OpenSSH.Server*'`.
+On some Windows editions you may need to install Windows updates first,
+then reboot and rerun.
 
-**`Permission denied (publickey)`**
-Check that your laptop's public key is in your GitHub account. The script
-reads
-`https://api.github.com/users/<your-username>/keys`,
-so anything not on that list will not be accepted. Ensure you are connecting
-as the SSH user the script created (default `devops`).
+**`Permission denied (publickey)` when trying to SSH.**
+Make sure the laptop's public key is in your GitHub account and that you
+are connecting as the SSH user the script created (default `devops`).
 
-**Firewall rule issues.**
-Inspect the rule:
+**Firewall rule looks wrong.**
+Inspect it with
 `Get-NetFirewallRule -Name OpenSSH-Server-In-TCP-TailscaleOnly | Format-List *`.
-The default rule `OpenSSH-Server-In-TCP` should be **disabled**.
+The default rule `OpenSSH-Server-In-TCP` should be **Disabled**.
 
 **`winget` is missing.**
 Install the latest "App Installer" from the Microsoft Store, or install
-Tailscale manually from <https://tailscale.com/download/windows>, then rerun
-the script.
+Tailscale manually from <https://tailscale.com/download/windows>, then
+rerun the script.
 
 **The Tailscale adapter cannot be detected.**
-Reboot, ensure Tailscale is connected (it should appear as a network adapter
-in `Get-NetAdapter`), and rerun the script. The script refuses to open SSH
+Reboot, confirm Tailscale is connected (it should appear in
+`Get-NetAdapter`), and rerun the script. The script refuses to open SSH
 publicly if it cannot identify the Tailscale adapter or IP.
 
 **`tailscale ip -4` does not return an IP.**
-Run `tailscale status` to check the connection state. If the machine is not
-logged in, run `tailscale up --hostname=petbox --unattended` and complete the
-browser login.
+Run `tailscale status` to see the connection state. If the machine is not
+logged in, run `tailscale up --hostname=petbox --unattended` and complete
+the browser login.
 
 ## Security notes
 
 - No secrets are stored in this repo.
 - **Never** commit Tailscale auth keys.
-- **Never** commit private SSH keys (`id_ed25519`, `id_rsa`, `*.pem`, `*.key`).
-- Do **not** forward port 22 on your router. SSH is intentionally reachable
-  only over Tailscale.
-- For long-term reuse, **pin** the raw GitHub URL to a specific commit SHA
-  instead of `main`, so a compromised branch cannot silently change what you
-  run as Administrator.
-- Always **review the script** before executing it as Administrator. The
-  `notepad $ScriptPath` step in the bootstrap command is there for that
-  reason.
+- **Never** commit private SSH keys (`id_ed25519`, `id_rsa`, `*.pem`,
+  `*.key`).
+- Do **not** forward port 22 on your router. SSH is intentionally
+  reachable only over Tailscale.
+- Always **read the script** before running it as Administrator. The
+  Notepad step in the bootstrap command is there for that reason.
+- For long-term reuse, **pin** the raw GitHub URL to a specific commit
+  SHA instead of `main`, so a later change to the branch cannot silently
+  change what you run.
 - Public GitHub SSH keys are public by design. Private keys must remain
   secret.
 - SSH password login is intentionally disabled.
 - SSH is intended to be reachable only through Tailscale.
 
-See [SECURITY.md](SECURITY.md) for the full threat model and key-rotation
-procedure.
+See [SECURITY.md](SECURITY.md) for the full threat model, key-rotation
+steps, and how to revoke access.
 
 ## After bootstrap
 
 Once SSH works from the laptop, this repository is done. Anything else
-(Docker installation, Docker Compose, app deployments, pulling images from
-GHCR, configuring caches, GitHub Actions self-hosted runners, reverse
-proxies, CI/CD) should be configured **later, remotely, over SSH**.
+(Docker, app deployments, GHCR pulls, GitHub Actions runners, reverse
+proxies, CI/CD) belongs **later, remotely, over SSH** and is out of scope
+here.
 
-Keeping this repo small is the point. Bootstrap stays boring; the rest is
-managed elsewhere.
+Bootstrap stays small and boring on purpose; the rest is managed
+elsewhere.
