@@ -717,19 +717,56 @@ try {
     New-ProjectDirectories -Root $ProjectRoot
     Write-Success
 
-    Write-Title 'Final result'
-    Write-Host '  Tailscale IP:' -ForegroundColor White
-    Write-Host ("    {0}" -f $tailscaleIp) -ForegroundColor Green
+    Write-Title 'Bootstrap complete - SSH from your laptop'
+
+    Write-Host 'This Windows machine is now reachable over SSH through your tailnet.' -ForegroundColor White
     Write-Host ''
-    Write-Host '  Connect from your laptop:' -ForegroundColor White
-    Write-Host ("    ssh {0}@{1}" -f $SshUser, $MachineName) -ForegroundColor Green
-    Write-Host ("    ssh {0}@{1}" -f $SshUser, $tailscaleIp)  -ForegroundColor Green
+    Write-Host 'Connection details:' -ForegroundColor White
+    Write-Host ("  Tailscale hostname : {0}" -f $MachineName)
+    Write-Host ("  Tailscale IPv4     : {0}" -f $tailscaleIp)
+    Write-Host ("  SSH user           : {0}" -f $SshUser)
+    Write-Host  '  Authentication     : public key only (no password)'
     Write-Host ''
-    Write-Host '  Reminders:' -ForegroundColor White
-    Write-Host '    - SSH password login is disabled (key-only).'
-    Write-Host '    - SSH is restricted to the Tailscale interface.'
-    Write-Host '    - Once you have verified SSH from your laptop, you can'
-    Write-Host '      unplug the screen and keyboard from this machine.'
+
+    Write-Host 'Next steps - run these on your LAPTOP, not on this machine:' -ForegroundColor White
+    Write-Host ''
+
+    Write-Host '  1. Confirm Tailscale is running on your laptop and that' -ForegroundColor White
+    Write-Host '     this machine appears in its tailnet:'
+    Write-Host ''
+    Write-Host '         tailscale status' -ForegroundColor Green
+    Write-Host ''
+
+    Write-Host '  2. Open a terminal on your laptop (PowerShell, Terminal,' -ForegroundColor White
+    Write-Host '     or any shell with the ssh command) and run:'
+    Write-Host ''
+    Write-Host ("         ssh {0}@{1}" -f $SshUser, $MachineName) -ForegroundColor Green
+    Write-Host ''
+    Write-Host '     If MagicDNS does not resolve the hostname, use the IP'
+    Write-Host '     instead:'
+    Write-Host ''
+    Write-Host ("         ssh {0}@{1}" -f $SshUser, $tailscaleIp) -ForegroundColor Green
+    Write-Host ''
+
+    Write-Host '  3. The first time only, SSH will ask you to accept the' -ForegroundColor White
+    Write-Host '     host key fingerprint. Type "yes" and press Enter.'
+    Write-Host ''
+
+    Write-Host '  4. You should land at a PowerShell prompt running on this' -ForegroundColor White
+    Write-Host ('     machine (something like  PS C:\Users\{0}> ).' -f $SshUser)
+    Write-Host '     To leave the SSH session at any time, type:'
+    Write-Host ''
+    Write-Host '         exit' -ForegroundColor Green
+    Write-Host ''
+
+    Write-Host 'Reminders:' -ForegroundColor White
+    Write-Host '  - SSH password login is disabled (public-key authentication only).'
+    Write-Host '  - SSH is restricted to the Tailscale interface; nothing on the'
+    Write-Host '    public Internet can reach port 22 on this machine.'
+    Write-Host '  - Once SSH works from your laptop, you can unplug the screen'
+    Write-Host '    and keyboard from this machine.'
+    Write-Host ''
+    Write-Host 'If SSH does not work, see the Troubleshooting section of README.md.' -ForegroundColor Gray
     Write-Host ''
 }
 catch {
