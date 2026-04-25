@@ -140,18 +140,19 @@ The free tier is enough for personal use.
 Plug the screen and keyboard into the Windows machine. Open **PowerShell as
 Administrator**.
 
-Edit the four values at the top of the block below, then copy and paste
-the whole block. The script will be downloaded to `%TEMP%`, opened in
-Notepad so you can read it first, and only run after you close Notepad.
+Edit every value at the top of the block below, then copy and paste the
+whole block. The script will be downloaded to `%TEMP%`, opened in Notepad
+so you can read it first, and only run after you close Notepad.
 
 ```powershell
 $GitHubUser  = "your-github-username"
 $MachineName = "petbox"
 $SshUser     = "devops"
 $ProjectRoot = "C:\sources\pet-project"
+$RepoOwner   = "salfab"
+$RepoName    = "tailscale-bootstrap-windows"
 
-$RepoName   = "tailscale-bootstrap-windows"
-$ScriptUrl  = "https://raw.githubusercontent.com/salfab/$RepoName/main/bootstrap.ps1"
+$ScriptUrl  = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/main/bootstrap.ps1"
 $ScriptPath = "$env:TEMP\bootstrap.ps1"
 
 Invoke-WebRequest -Uri $ScriptUrl -OutFile $ScriptPath
@@ -163,17 +164,21 @@ PowerShell.exe -ExecutionPolicy Bypass -File $ScriptPath `
     -ProjectRoot $ProjectRoot
 ```
 
-The four values at the top are the only ones you usually need to change:
+Every variable at the top of the block is required and has no fallback —
+edit each value to match your setup before running:
 
-| Variable       | Example                  | What it is                                    |
-| -------------- | ------------------------ | --------------------------------------------- |
-| `$GitHubUser`  | `your-github-username`   | GitHub username whose public SSH keys to install. |
-| `$MachineName` | `petbox`                 | Tailscale hostname for this machine.              |
-| `$SshUser`     | `devops`                 | Local Windows username created for SSH.           |
-| `$ProjectRoot` | `C:\sources\pet-project` | Project root directory (with `cache/`, `data/`, `tmp/`). |
+| Variable       | Example                  | What it is                                                    |
+| -------------- | ------------------------ | ------------------------------------------------------------- |
+| `$GitHubUser`  | `your-github-username`   | GitHub username whose public SSH keys to install.             |
+| `$MachineName` | `petbox`                 | Tailscale hostname for this machine.                          |
+| `$SshUser`     | `devops`                 | Local Windows username created for SSH.                       |
+| `$ProjectRoot` | `C:\sources\pet-project` | Project root directory (with `cache/`, `data/`, `tmp/`).      |
+| `$RepoOwner`   | `salfab`                 | GitHub user/organisation that hosts `bootstrap.ps1`.          |
+| `$RepoName`    | `tailscale-bootstrap-windows` | GitHub repository name where `bootstrap.ps1` lives.      |
 
-All four are required. The script has no built-in defaults: if any is
-missing it prints a usage screen and exits without making changes.
+The four `-GitHubUser`, `-MachineName`, `-SshUser`, `-ProjectRoot` flags are
+required by `bootstrap.ps1` itself; if any is missing the script prints a
+usage screen and exits without making changes.
 
 Notes:
 
