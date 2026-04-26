@@ -279,6 +279,85 @@ the browser login.
 See [SECURITY.md](SECURITY.md) for the full threat model, key-rotation
 steps, and how to revoke access.
 
+## Best practices for running the bootstrap
+
+**Before running:**
+
+- Open `https://github.com/<your-username>.keys` in a browser and confirm
+  every key listed is one you still trust. Anything on that page will get
+  SSH access on the headless machine. Remove anything stale at
+  <https://github.com/settings/keys> first.
+- Make sure your GitHub account is protected with 2FA (ideally a hardware
+  security key). The bootstrap inherits whatever security GitHub provides
+  for your account.
+- Make sure your dev machine is already in the same tailnet, so you can
+  verify SSH from it the moment the headless machine joins. If the dev
+  machine isn't ready, you'll have to walk back to the screen and
+  keyboard later.
+- Read `bootstrap.ps1` after `Invoke-WebRequest` downloads it to
+  `%TEMP%`. The Notepad step in the step-4 block is there for that
+  reason — don't skip it.
+- For repeatable, auditable runs, switch `$ScriptUrl` from `main` to a
+  pinned reference (commit SHA or release tag — see *Cutting a release*
+  below).
+
+**After running:**
+
+- Run `tailscale status` on your dev machine and confirm the headless
+  machine is listed before unplugging anything. The script's final
+  walkthrough prints the exact commands.
+- The script is idempotent. Rerun it any time you change your GitHub
+  SSH keys: new keys are merged into `administrators_authorized_keys`,
+  duplicates are de-duplicated, and old keys you've already removed
+  from GitHub will eventually fall out the next time you rerun (or you
+  can edit the file by hand).
+- For full key rotation and revocation procedures, see [SECURITY.md](SECURITY.md).
+
+## Cutting a release (for maintainers)
+
+`main` can change. Anyone running the bootstrap from
+`https://raw.githubusercontent.com/.../main/bootstrap.ps1` runs whatever
+is on the branch at that moment. For a stable, auditable distribution,
+publish a GitHub release and have users pin to it.
+
+1. Tag the commit you want to ship and push the tag:
+
+   ```bash
+   git tag -a v1.0.0 -m "First stable bootstrap"
+   git push origin v1.0.0
+   ```
+
+2. Create a release attached to that tag and upload `bootstrap.ps1` as
+   an asset. Via the GitHub UI: click *Draft a new release* on the
+   Releases page. Or via the GitHub CLI:
+
+   ```bash
+   gh release create v1.0.0 ./bootstrap.ps1 `
+       --title "v1.0.0" `
+       --notes "First stable release of the Tailscale + OpenSSH bootstrap."
+   ```
+
+3. Update the step-4 block in this README so `$ScriptUrl` points to the
+   release asset instead of `main`:
+
+   ```powershell
+   $ScriptUrl = "https://github.com/$RepoOwner/$RepoName/releases/download/v1.0.0/bootstrap.ps1"
+   ```
+
+   The release-asset URL is immutable once published — GitHub will not
+   let the asset bytes change after the fact. Users who pin to `v1.0.0`
+   always get the exact same script.
+
+Maintainer hygiene:
+
+- Sign tags with GPG (`git tag -s ...`) so consumers can verify
+  provenance with `git tag -v`.
+- Cut a **new** release for every change, even one-line edits. Never
+  edit a published `bootstrap.ps1` in place — that defeats the
+  immutability guarantee.
+- Keep release notes specific: what changed, why, and call out any
+  security-sensitive edit so users know whether to upgrade.
+
 ## After bootstrap
 
 Once SSH works from the dev machine, this repository is done. Anything else
