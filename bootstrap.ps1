@@ -403,7 +403,7 @@ function Get-GitHubPublicKeys {
         throw "GitHub user '$User' has keys, but none matched a known SSH public-key prefix."
     }
 
-    return $keys
+    return , $keys
 }
 
 function Set-AdministratorsAuthorizedKeys {
@@ -699,7 +699,7 @@ try {
     Write-Success
 
     Write-Step 6 $total 'Fetching public SSH keys from GitHub...'
-    $githubKeys = Get-GitHubPublicKeys -User $GitHubUser
+    $githubKeys = @(Get-GitHubPublicKeys -User $GitHubUser)
     Write-Info ("Got {0} key(s) from GitHub user '{1}'." -f $githubKeys.Count, $GitHubUser)
     Write-Success
 
